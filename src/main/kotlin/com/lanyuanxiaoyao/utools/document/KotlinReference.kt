@@ -85,7 +85,7 @@ fun main() {
             .filterNot { it.url.startsWith("http") }
             .filter { it.parsedUrl.isNotBlank() }
             .forEachIndexed { index, page ->
-                if (index <= 10) {
+                if (index <= 9) {
                     return@forEachIndexed
                 }
                 println("${page.parsedTitle} ${page.parsedUrl}")
@@ -131,7 +131,7 @@ fun main() {
                     .replace("src=\"images/", "src=\"https://kotlinlang.org/docs/images/")
 
                 val path = Paths.get(pathSet.pages.toString(), "$index - ${page.title.replace("/", "-")}.html")
-                Utils.writeAndDeleteIfExists(path, Utils.translateHtml(source))
+                Utils.writeAndDeleteIfExists(path, source)
             }
     }
 }

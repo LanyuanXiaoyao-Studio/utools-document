@@ -14,9 +14,11 @@ import org.openqa.selenium.chrome.ChromeDriverService
 import org.openqa.selenium.chrome.ChromeOptions
 import java.net.InetSocketAddress
 import java.net.Proxy
+import java.net.URLEncoder
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
+import java.time.Duration
 import java.time.Instant
 import java.util.*
 import kotlin.random.Random
@@ -75,11 +77,21 @@ class Utils {
             }
         }
 
-        fun httpClient(proxy: Boolean = false): OkHttpClient =
-            if (proxy)
-                OkHttpClient.Builder().proxy(Proxy(Proxy.Type.HTTP, InetSocketAddress(1080))).build()
+        fun httpClient(proxy: Boolean = false): OkHttpClient {
+            val duration = Duration.ofMinutes(5)
+            val builder = OkHttpClient.Builder()
+                .callTimeout(duration)
+                .connectTimeout(duration)
+                .readTimeout(duration)
+                .writeTimeout(duration)
+                .retryOnConnectionFailure(true)
+            return if (proxy)
+                builder
+                    .proxy(Proxy(Proxy.Type.HTTP, InetSocketAddress(1080)))
+                    .build()
             else
-                OkHttpClient.Builder().build()
+                builder.build()
+        }
 
         fun downloadText(url: String, proxy: Boolean = false): String {
             val client = httpClient(proxy)
@@ -122,14 +134,22 @@ class Utils {
             val sign = MD5.create().digestHex("$appId$query$salt$secret")
             val client = httpClient()
             val request = Request.Builder()
-                .url("http://api.fanyi.baidu.com/api/trans/vip/translate?q=$query&from=en&to=zh&appid=$appId&salt=$salt&sign=$sign")
+                .url("http://api.fanyi.baidu.com/api/trans/vip/translate?q=${URLEncoder.encode(query, Charsets.UTF_8.name())}&from=en&to=zh&appid=$appId&salt=$salt&sign=$sign")
                 .build()
             val response = client.newCall(request).execute().body
             val result = response?.string() ?: ""
+            println(result)
             val map = Json.decodeFromString(JsonObject.serializer(), result)
             val transResult = (map["trans_result"] ?: return "") as JsonArray
             val resultItem = transResult[0] as JsonObject
-            return resultItem["dst"].toString()
+            var resultText = resultItem["dst"].toString()
+            if (!query.startsWith("\"")) {
+                resultText = resultText.replace(Regex("^\""), "")
+            }
+            if (!query.endsWith("\"")) {
+                resultText = resultText.replace(Regex("\"$"), "")
+            }
+            return resultText
         }
 
         fun translateHtml(html: String): String {
@@ -140,9 +160,13 @@ class Utils {
                 .filterNot { it.parents().map { p -> p.tagName() }.contains("code") }
                 .filter { it.ownText().isNotBlank() }
             val amount = elements.size - 1
-            elements.forEachIndexed { index, element ->
-                println("Translated: $index/$amount")
+
+            val text = elements.joinToString("\n") { it.text() }
+
+            /*elements.forEachIndexed { index, element ->
+                print("Translated: $index/$amount, Text: ${element.text()}")
                 val translateText = translate(element.text())
+                println(" TransText: $translateText")
                 when {
                     element.tagName() == "p" -> {
                         element.html("${element.html()}<br><p class=\"trans-p\">$translateText</p>")
@@ -155,8 +179,9 @@ class Utils {
                     }
                 }
                 Thread.sleep(1100)
-            }
-            return document.html()
+            }*/
+            // return document.html()
+            return translate(text)
         }
     }
 }
