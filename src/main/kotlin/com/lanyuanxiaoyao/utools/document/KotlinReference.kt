@@ -84,14 +84,26 @@ fun main() {
             .filterNot { it.url.startsWith("http") }
             .filter { it.parsedUrl.isNotBlank() }
             .forEachIndexed { index, page ->
-                if (index <= -1) {
+                if (index <= 10) {
                     return@forEachIndexed
                 }
                 println("${page.parsedTitle} ${page.parsedUrl}")
                 it.get(page.parsedUrl)
-                it.executeScript("document.querySelector('.kt-app__sidebar').remove()")
-                it.executeScript("document.querySelector('.kt-app__header').remove()")
-                it.executeScript("document.querySelector('.kt-app__footer').remove()")
+                try {
+                    WebDriverWait(it, 10).until { it.findElement(By.className("kt-app__sidebar")) }
+                    it.executeScript("document.querySelector('.kt-app__sidebar').remove()")
+                } catch (exception: Exception) {
+                }
+                try {
+                    WebDriverWait(it, 10).until { it.findElement(By.className("kt-app__header")) }
+                    it.executeScript("document.querySelector('.kt-app__header').remove()")
+                } catch (exception: Exception) {
+                }
+                try {
+                    WebDriverWait(it, 10).until { it.findElement(By.className("kt-app__footer")) }
+                    it.executeScript("document.querySelector('.kt-app__footer').remove()")
+                } catch (exception: Exception) {
+                }
                 try {
                     WebDriverWait(it, 10).until { it.findElement(By.className("feedback")) }
                     it.executeScript("document.querySelector('.feedback').remove()")
