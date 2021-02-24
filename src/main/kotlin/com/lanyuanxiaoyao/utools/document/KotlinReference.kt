@@ -75,6 +75,7 @@ private fun parseItems(toc: Toc, pages: List<Page>, parent: Page? = null): List<
 
 fun main() {
     Utils.browserWithClose(proxy = true) {
+        it.manage().window().maximize()
         val tocText = Utils.downloadText("https://kotlinlang.org/docs/HelpTOC.json")
         val toc = parseToc(tocText)
         val pages = toc.topLevelIds.mapNotNull { toc.entities.pages[it] }

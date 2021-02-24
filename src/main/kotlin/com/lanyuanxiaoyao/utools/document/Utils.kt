@@ -18,6 +18,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.time.Instant
+import java.util.*
 import kotlin.random.Random
 
 data class PathSet(
@@ -41,13 +42,14 @@ data class Shortcut(
 class Utils {
     companion object {
         fun browser(headless: Boolean = false, proxy: Boolean = false): ChromeDriver {
-            System.setProperty(
-                ChromeDriverService.CHROME_DRIVER_EXE_PROPERTY,
-                "/Users/lanyuanxiaoyao/Downloads/chromedriver_mac64/chromedriver"
-            )
+            val properties = Properties()
+            properties.load(Files.newBufferedReader(Paths.get("browser.properties")))
+            val driverPath = (properties["driver"] ?: throw Exception("driverPath not found.")) as String
+            val binaryPath = (properties["binary"] ?: throw Exception("binaryPath not found.")) as String
+            System.setProperty(ChromeDriverService.CHROME_DRIVER_EXE_PROPERTY, driverPath)
             return ChromeDriver(
                 ChromeOptions().apply {
-                    setBinary("/Users/lanyuanxiaoyao/Downloads/chrome-mac/Chromium.app/Contents/MacOS/Chromium")
+                    setBinary(binaryPath)
                     setHeadless(headless)
                     addArguments(
                         "--disable-gpu",
