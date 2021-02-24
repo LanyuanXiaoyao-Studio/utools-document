@@ -74,9 +74,10 @@ private fun parseItems(toc: Toc, pages: List<Page>, parent: Page? = null): List<
 }
 
 fun main() {
-    Utils.browserWithClose(proxy = true) {
-        it.manage().window().maximize()
-        val tocText = Utils.downloadText("https://kotlinlang.org/docs/HelpTOC.json")
+    Utils.browserWithClose(headless = true, proxy = true) { driver ->
+        driver.manage().window().maximize()
+        val tocText = Utils.readAndEmptyIfNonExists(Paths.get("/Users/lanyuanxiaoyao/Downloads/HelpTOC.json"))
+        // val tocText = Utils.downloadText("https://kotlinlang.org/docs/HelpTOC.json")
         val toc = parseToc(tocText)
         val pages = toc.topLevelIds.mapNotNull { toc.entities.pages[it] }
         val pathSet = Utils.pathSet("kotlin-reference")
@@ -85,53 +86,55 @@ fun main() {
             .filterNot { it.url.startsWith("http") }
             .filter { it.parsedUrl.isNotBlank() }
             .forEachIndexed { index, page ->
-                if (index <= 9) {
+                if (index > 0) {
                     return@forEachIndexed
                 }
                 println("${page.parsedTitle} ${page.parsedUrl}")
-                it.get(page.parsedUrl)
+                driver.get(page.parsedUrl)
                 try {
-                    WebDriverWait(it, 10).until { it.findElement(By.className("kt-app__sidebar")) }
-                    it.executeScript("document.querySelector('.kt-app__sidebar').remove()")
+                    WebDriverWait(driver, 10).until { it.findElement(By.className("kt-app__sidebar")) }
+                    driver.executeScript("document.querySelector('.kt-app__sidebar').remove()")
                 } catch (exception: Exception) {
                 }
                 try {
-                    WebDriverWait(it, 10).until { it.findElement(By.className("kt-app__header")) }
-                    it.executeScript("document.querySelector('.kt-app__header').remove()")
+                    WebDriverWait(driver, 10).until { it.findElement(By.className("kt-app__header")) }
+                    driver.executeScript("document.querySelector('.kt-app__header').remove()")
                 } catch (exception: Exception) {
                 }
                 try {
-                    WebDriverWait(it, 10).until { it.findElement(By.className("kt-app__footer")) }
-                    it.executeScript("document.querySelector('.kt-app__footer').remove()")
+                    WebDriverWait(driver, 10).until { it.findElement(By.className("kt-app__footer")) }
+                    driver.executeScript("document.querySelector('.kt-app__footer').remove()")
                 } catch (exception: Exception) {
                 }
                 try {
-                    WebDriverWait(it, 10).until { it.findElement(By.className("feedback")) }
-                    it.executeScript("document.querySelector('.feedback').remove()")
+                    WebDriverWait(driver, 10).until { it.findElement(By.className("feedback")) }
+                    driver.executeScript("document.querySelector('.feedback').remove()")
                 } catch (exception: Exception) {
                 }
                 try {
-                    WebDriverWait(it, 10).until { it.findElement(By.className("navigation-links")) }
-                    it.executeScript("document.querySelector('.navigation-links').remove()")
+                    WebDriverWait(driver, 10).until { it.findElement(By.className("navigation-links")) }
+                    driver.executeScript("document.querySelector('.navigation-links').remove()")
                 } catch (exception: Exception) {
                 }
                 try {
-                    WebDriverWait(it, 10).until { it.findElement(By.className("kt-app__virtual-toc-sidebar")) }
-                    it.executeScript("document.querySelector('.kt-app__virtual-toc-sidebar').remove()")
+                    WebDriverWait(driver, 10).until { it.findElement(By.className("kt-app__virtual-toc-sidebar")) }
+                    driver.executeScript("document.querySelector('.kt-app__virtual-toc-sidebar').remove()")
                 } catch (exception: Exception) {
                 }
                 try {
-                    WebDriverWait(it, 10).until { it.findElement(By.className("jetbrains-cookies-banner")) }
-                    it.executeScript("document.querySelector(`.jetbrains-cookies-banner`).remove()")
+                    WebDriverWait(driver, 10).until { it.findElement(By.className("jetbrains-cookies-banner")) }
+                    driver.executeScript("document.querySelector(`.jetbrains-cookies-banner`).remove()")
                 } catch (exception: Exception) {
                 }
-                it.executeScript("document.querySelectorAll('script').forEach(e => e.remove())")
-                val source = it.pageSource
+                driver.executeScript("document.querySelectorAll('script').forEach(e => e.remove())")
+                driver.executeScript("document.querySelectorAll('.run-button').forEach(e => e.remove())")
+                driver.executeScript("let body = document.querySelector('body')\nlet firstChild = body.firstChild\nlet info = document.createElement('div')\ninfo.className = 'author-desc'\ninfo.style.textAlign = 'center'\ninfo.style.color = 'darkgray'\ninfo.innerHTML = '文档制作：<b>lanyuanxiaoyao</b> | 译文：百度翻译 | 全机翻译文仅供辅助理解，不对译文正确性作任何保证'\nbody.insertBefore(info, firstChild)")
+                val source = driver.pageSource
                     .replace("static/v3/app.css", "style.css")
                     .replace("src=\"images/", "src=\"https://kotlinlang.org/docs/images/")
 
                 val path = Paths.get(pathSet.pages.toString(), "$index - ${page.title.replace("/", "-")}.html")
-                Utils.writeAndDeleteIfExists(path, source)
+                Utils.writeAndDeleteIfExists(path, Utils.translateHtml(source))
             }
     }
 }

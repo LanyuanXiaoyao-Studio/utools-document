@@ -126,30 +126,47 @@ class Utils {
 
         fun readAndEmptyIfNonExists(path: Path) = Files.readAllBytes(path).toString(Charsets.UTF_8)
 
-        fun translate(query: String): String {
-            if (query.isBlank()) return ""
+        fun translate(query: String): Map<String, String> {
+            println(query)
+            if (query.isBlank()) return mutableMapOf()
             val salt = Random(Instant.now().toEpochMilli()).nextInt(10, 100).toString()
             val appId = "20160128000009605"
             val secret = "UrQhT6doB8Qu_YUArJY7"
             val sign = MD5.create().digestHex("$appId$query$salt$secret")
             val client = httpClient()
             val request = Request.Builder()
-                .url("http://api.fanyi.baidu.com/api/trans/vip/translate?q=${URLEncoder.encode(query, Charsets.UTF_8.name())}&from=en&to=zh&appid=$appId&salt=$salt&sign=$sign")
+                .url(
+                    "http://api.fanyi.baidu.com/api/trans/vip/translate?q=${
+                        URLEncoder.encode(
+                            query,
+                            Charsets.UTF_8.name()
+                        )
+                    }&from=en&to=zh&appid=$appId&salt=$salt&sign=$sign"
+                )
                 .build()
             val response = client.newCall(request).execute().body
             val result = response?.string() ?: ""
             println(result)
             val map = Json.decodeFromString(JsonObject.serializer(), result)
-            val transResult = (map["trans_result"] ?: return "") as JsonArray
-            val resultItem = transResult[0] as JsonObject
-            var resultText = resultItem["dst"].toString()
-            if (!query.startsWith("\"")) {
-                resultText = resultText.replace(Regex("^\""), "")
+            val transResult = (map["trans_result"] ?: return mutableMapOf()) as JsonArray
+
+            val resultMap = mutableMapOf<String, String>()
+            transResult.forEach {
+                val item = it as JsonObject
+                var source = item["src"].toString()
+                var text = item["dst"].toString()
+                println(text)
+                if (!query.startsWith("\"")) {
+                    source = source.replace(Regex("^\""), "")
+                    text = text.replace(Regex("^\""), "")
+                }
+                if (!query.endsWith("\"")) {
+                    source = source.replace(Regex("\"$"), "")
+                    text = text.replace(Regex("\"$"), "")
+                }
+                resultMap[source] = text
             }
-            if (!query.endsWith("\"")) {
-                resultText = resultText.replace(Regex("\"$"), "")
-            }
-            return resultText
+            return resultMap.toMap()
         }
 
         fun translateHtml(html: String): String {
@@ -160,28 +177,52 @@ class Utils {
                 .filterNot { it.parents().map { p -> p.tagName() }.contains("code") }
                 .filter { it.ownText().isNotBlank() }
             val amount = elements.size - 1
-
-            val text = elements.joinToString("\n") { it.text() }
-
-            /*elements.forEachIndexed { index, element ->
-                print("Translated: $index/$amount, Text: ${element.text()}")
-                val translateText = translate(element.text())
+            val lines = elements.map { it.text().trim() }.toSet().toList()
+            println(lines.size)
+            val linesGroup = splitList(lines) { list, _, last, now ->
+                val count = list.subList(last, now + 1)
+                    .map { it.length }
+                    .sum()
+                count > 4000
+            }
+            println(linesGroup.map { it.size })
+            val translateResultMap = mutableMapOf<String, String>()
+            linesGroup
+                .map {
+                    Thread.sleep(1200)
+                    translate(it.joinToString("\n"))
+                }
+                .forEach {
+                    println(it.size)
+                    translateResultMap.putAll(it)
+                }
+            elements.forEachIndexed { index, element ->
+                print("Translated: $index/$amount, Text: ${element.text().trim()}")
+                print(" ${translateResultMap[element.text().trim()]}")
+                val translateText = translateResultMap[element.text().trim()] ?: ""
                 println(" TransText: $translateText")
                 when {
-                    element.tagName() == "p" -> {
-                        element.html("${element.html()}<br><p class=\"trans-p\">$translateText</p>")
-                    }
-                    element.parents().map { p -> p.tagName() }.any { t -> t.matches(Regex("h\\d")) } -> {
+                    element.tagName() == "p" -> element.html("${element.html()}<br><p class=\"trans-p\">$translateText</p>")
+                    element.parents().map { p -> p.tagName() }.any { t -> t.matches(Regex("h\\d")) } ->
                         element.html("${element.html()}<br><div class=\"trans-p\">$translateText</div>")
-                    }
-                    else -> {
-                        element.html("${element.html()} <span class=\"trans-inline\">$translateText</span>")
-                    }
+                    element.tagName() == "title" -> element.html("${element.html()} $translateText")
+                    element.className() == "author-desc" -> {}
+                    else -> element.html("${element.html()} <span class=\"trans-inline\">$translateText</span>")
                 }
-                Thread.sleep(1100)
-            }*/
-            // return document.html()
-            return translate(text)
+            }
+            return document.html()
+        }
+
+        fun <E> splitList(list: List<E>, condition: (List<E>, E, Int, Int) -> Boolean): List<List<E>> {
+            val group = mutableListOf<List<E>>()
+            var last = 0
+            for (index in list.indices) {
+                if (condition(list, list[index], last, index) || index == list.size - 1) {
+                    group.add(list.subList(last, index + 1))
+                    last = index + 1
+                }
+            }
+            return group.toList()
         }
     }
 }
