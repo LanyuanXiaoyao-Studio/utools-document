@@ -206,7 +206,7 @@ class Utils {
                     element.parents().map { p -> p.tagName() }.any { t -> t.matches(Regex("h\\d")) } ->
                         element.html("${element.html()}<br><div class=\"trans-p\">$translateText</div>")
                     element.tagName() == "title" -> element.html("${element.html()} $translateText")
-                    element.className() == "author-desc" -> {}
+                    element.className() == "author-desc" -> return@forEachIndexed
                     else -> element.html("${element.html()} <span class=\"trans-inline\">$translateText</span>")
                 }
             }
