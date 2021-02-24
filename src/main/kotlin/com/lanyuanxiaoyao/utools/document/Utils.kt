@@ -137,9 +137,9 @@ class Utils {
                 .filterNot { it.parents().map { p -> p.tagName() }.contains("pre") }
                 .filterNot { it.parents().map { p -> p.tagName() }.contains("code") }
                 .filter { it.ownText().isNotBlank() }
-            val amount = elements.size
+            val amount = elements.size - 1
             elements.forEachIndexed { index, element ->
-                println("Now handle: $index/$amount")
+                println("Translated: $index/$amount")
                 val translateText = translate(element.text())
                 when {
                     element.tagName() == "p" -> {
