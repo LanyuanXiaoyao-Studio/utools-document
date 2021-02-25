@@ -90,7 +90,7 @@ fun main() {
             .filterNot { it.url.startsWith("http") }
             .filter { it.parsedUrl.isNotBlank() }
             .forEachIndexed { index, page ->
-                if (index < 0) {
+                if (index > 10) {
                     return@forEachIndexed
                 }
                 println("${page.parsedTitle} ${page.parsedUrl}")
@@ -132,19 +132,33 @@ fun main() {
                 }
                 driver.executeScript("document.querySelectorAll('script').forEach(e => e.remove())")
                 driver.executeScript("document.querySelectorAll('.run-button').forEach(e => e.remove())")
-                driver.executeScript("let body = document.querySelector('.layout--scroll-container')\nlet firstChild = body.firstChild\nlet info = document.createElement('div')\ninfo.className = 'author-desc no-trans'\ninfo.style.textAlign = 'center'\ninfo.style.color = 'darkgray'\ninfo.style.fontSize = 'smaller'\ninfo.innerHTML = '文档制作：<a class=\"no-trans\" target=\"_blank\" href=\"https://donate.lanyuanxiaoyao.com\">lanyuanxiaoyao</a> | 原页面 | 译文：百度翻译 | 全机翻译文仅供辅助理解，不对译文正确性作任何保证'\nbody.insertBefore(info, firstChild)")
+                driver.executeScript("let body = document.querySelector('.layout--scroll-container')\nlet firstChild = body.firstChild\nlet info = document.createElement('div')\ninfo.className = 'author-desc no-trans'\ninfo.style.textAlign = 'center'\ninfo.style.color = 'darkgray'\ninfo.style.fontSize = 'smaller'\ninfo.innerHTML = '文档制作：<a class=\"no-trans\" target=\"_blank\" href=\"https://donate.lanyuanxiaoyao.com\" style=\"color: darkgray\">lanyuanxiaoyao</a> | <a class=\"no-trans\" target=\"_blank\" href=\"${page.parsedUrl}\" style=\"color: darkgray\">原文</a> | 译文：百度翻译 | 译文仅供辅助，不保证译文正确性'\nbody.insertBefore(info, firstChild)")
                 val source = driver.pageSource
                     .replace("static/v3/app.css", "style.css")
                     .replace("src=\"images/", "src=\"https://kotlinlang.org/docs/images/")
                 val translatedSource = Utils.translateHtml(source)
 
-                val filename = "$index - ${page.title.replace("/", "-")}.html"
+                val filename = page.url
                 val path = Paths.get(pathSet.pages.toString(), filename)
                 Utils.writeAndDeleteIfExists(path, translatedSource)
-                val text = Jsoup.parse(translatedSource)
+
+                val doc = Jsoup.parse(translatedSource)
+                val text = doc
                     .select("article .article .article__flow-element .trans-p")
                     .text()
                 shortcuts.add(Shortcut(page.title, HanLP.getSummary(text, 1000), "pages/$filename"))
+
+                page.anchors.forEach { anchorId ->
+                    val anchor = toc.entities.anchors[anchorId] ?: return@forEach
+                    val anchorText = doc.selectFirst(anchor.anchor)?.select(".trans-p")?.text() ?: ""
+                    shortcuts.add(
+                        Shortcut(
+                            anchor.title,
+                            if (anchorText.isBlank()) "" else HanLP.getSummary(anchorText, 1000),
+                            "pages/${anchor.url}${anchor.anchor}"
+                        )
+                    )
+                }
             }
         Utils.writeAndDeleteIfExists(pathSet.indexes, Json.encodeToString(shortcuts))
     }
