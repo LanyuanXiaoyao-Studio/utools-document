@@ -23,13 +23,24 @@ import java.time.Instant
 import java.util.*
 import kotlin.random.Random
 
+fun Path.join(vararg pathNames: String) = Paths.get(this.toString(), *pathNames)
+
 data class PathSet(
     val out: Path,
     val pages: Path,
     val indexes: Path,
     val sourceCss: Path,
     val targetCss: Path,
-)
+    val temp: Path,
+) {
+    fun tempFile(name: String) = Paths.get(temp.toString(), name)
+
+    fun tempFolder(name: String): Path {
+        val path = Paths.get(temp.toString(), name)
+        Files.createDirectories(path)
+        return path
+    }
+}
 
 @Serializable
 data class Shortcut(
@@ -106,15 +117,18 @@ class Utils {
             val sourceCss = Paths.get("css", "$name.css")
             val out = Paths.get("build", "out", name)
             val pages = Paths.get(out.toString(), "pages")
+            val temp = Paths.get(out.toString(), "temp")
             val pathSet = PathSet(
                 out = out,
                 pages = pages,
                 indexes = Paths.get(out.toString(), "indexes.json"),
                 sourceCss = sourceCss,
-                targetCss = Paths.get(pages.toString(), "style.css")
+                targetCss = Paths.get(pages.toString(), "style.css"),
+                temp = temp,
             )
             Files.createDirectories(pathSet.out)
             Files.createDirectories(pathSet.pages)
+            Files.createDirectories(pathSet.temp)
             return pathSet
         }
 
