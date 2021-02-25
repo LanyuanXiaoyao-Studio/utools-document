@@ -80,8 +80,8 @@ fun main() {
     Utils.browserWithClose(headless = true, proxy = true) { driver ->
         driver.manage().window().maximize()
         val shortcuts = mutableListOf<Shortcut>()
-        val tocText = Utils.readAndEmptyIfNonExists(Paths.get("/Users/lanyuanxiaoyao/Downloads/HelpTOC.json"))
-        // val tocText = Utils.downloadText("https://kotlinlang.org/docs/HelpTOC.json")
+        // val tocText = Utils.readAndEmptyIfNonExists(Paths.get("/Users/lanyuanxiaoyao/Downloads/HelpTOC.json"))
+        val tocText = Utils.downloadText("https://kotlinlang.org/docs/HelpTOC.json")
         val toc = parseToc(tocText)
         val pages = toc.topLevelIds.mapNotNull { toc.entities.pages[it] }
         val pathSet = Utils.pathSet("kotlin-reference")
