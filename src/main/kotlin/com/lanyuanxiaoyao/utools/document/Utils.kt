@@ -178,14 +178,12 @@ class Utils {
                 .filter { it.ownText().isNotBlank() }
             val amount = elements.size - 1
             val lines = elements.map { it.text().trim() }.toSet().toList()
-            println(lines.size)
             val linesGroup = splitList(lines) { list, _, last, now ->
                 val count = list.subList(last, now + 1)
                     .map { it.length }
                     .sum()
                 count > 4000
             }
-            println(linesGroup.map { it.size })
             val translateResultMap = mutableMapOf<String, String>()
             linesGroup
                 .map {
@@ -198,15 +196,14 @@ class Utils {
                 }
             elements.forEachIndexed { index, element ->
                 print("Translated: $index/$amount, Text: ${element.text().trim()}")
-                print(" ${translateResultMap[element.text().trim()]}")
                 val translateText = translateResultMap[element.text().trim()] ?: ""
                 println(" TransText: $translateText")
                 when {
+                    element.className().contains("no-trans") -> return@forEachIndexed
                     element.tagName() == "p" -> element.html("${element.html()}<br><p class=\"trans-p\">$translateText</p>")
                     element.parents().map { p -> p.tagName() }.any { t -> t.matches(Regex("h\\d")) } ->
                         element.html("${element.html()}<br><div class=\"trans-p\">$translateText</div>")
                     element.tagName() == "title" -> element.html("${element.html()} $translateText")
-                    element.className() == "author-desc" -> return@forEachIndexed
                     else -> element.html("${element.html()} <span class=\"trans-inline\">$translateText</span>")
                 }
             }

@@ -1,8 +1,11 @@
 package com.lanyuanxiaoyao.utools.document
 
+import com.hankcs.hanlp.HanLP
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import org.jsoup.Jsoup
 import org.openqa.selenium.By
 import org.openqa.selenium.support.ui.WebDriverWait
 import java.nio.file.Paths
@@ -76,8 +79,9 @@ private fun parseItems(toc: Toc, pages: List<Page>, parent: Page? = null): List<
 fun main() {
     Utils.browserWithClose(headless = true, proxy = true) { driver ->
         driver.manage().window().maximize()
-        val tocText = Utils.readAndEmptyIfNonExists(Paths.get("/Users/lanyuanxiaoyao/Downloads/HelpTOC.json"))
-        // val tocText = Utils.downloadText("https://kotlinlang.org/docs/HelpTOC.json")
+        val shortcuts = mutableListOf<Shortcut>()
+        // val tocText = Utils.readAndEmptyIfNonExists(Paths.get("/Users/lanyuanxiaoyao/Downloads/HelpTOC.json"))
+        val tocText = Utils.downloadText("https://kotlinlang.org/docs/HelpTOC.json")
         val toc = parseToc(tocText)
         val pages = toc.topLevelIds.mapNotNull { toc.entities.pages[it] }
         val pathSet = Utils.pathSet("kotlin-reference")
@@ -86,7 +90,7 @@ fun main() {
             .filterNot { it.url.startsWith("http") }
             .filter { it.parsedUrl.isNotBlank() }
             .forEachIndexed { index, page ->
-                if (index > 0) {
+                if (index < 0) {
                     return@forEachIndexed
                 }
                 println("${page.parsedTitle} ${page.parsedUrl}")
@@ -128,13 +132,20 @@ fun main() {
                 }
                 driver.executeScript("document.querySelectorAll('script').forEach(e => e.remove())")
                 driver.executeScript("document.querySelectorAll('.run-button').forEach(e => e.remove())")
-                driver.executeScript("let body = document.querySelector('body')\nlet firstChild = body.firstChild\nlet info = document.createElement('div')\ninfo.className = 'author-desc'\ninfo.style.textAlign = 'center'\ninfo.style.color = 'darkgray'\ninfo.innerHTML = '文档制作：<b>lanyuanxiaoyao</b> | 译文：百度翻译 | 全机翻译文仅供辅助理解，不对译文正确性作任何保证'\nbody.insertBefore(info, firstChild)")
+                driver.executeScript("let body = document.querySelector('.layout--scroll-container')\nlet firstChild = body.firstChild\nlet info = document.createElement('div')\ninfo.className = 'author-desc no-trans'\ninfo.style.textAlign = 'center'\ninfo.style.color = 'darkgray'\ninfo.style.fontSize = 'smaller'\ninfo.innerHTML = '文档制作：<a class=\"no-trans\" target=\"_blank\" href=\"https://donate.lanyuanxiaoyao.com\">lanyuanxiaoyao</a> | 原页面 | 译文：百度翻译 | 全机翻译文仅供辅助理解，不对译文正确性作任何保证'\nbody.insertBefore(info, firstChild)")
                 val source = driver.pageSource
                     .replace("static/v3/app.css", "style.css")
                     .replace("src=\"images/", "src=\"https://kotlinlang.org/docs/images/")
+                val translatedSource = Utils.translateHtml(source)
 
-                val path = Paths.get(pathSet.pages.toString(), "$index - ${page.title.replace("/", "-")}.html")
-                Utils.writeAndDeleteIfExists(path, Utils.translateHtml(source))
+                val filename = "$index - ${page.title.replace("/", "-")}.html"
+                val path = Paths.get(pathSet.pages.toString(), filename)
+                Utils.writeAndDeleteIfExists(path, translatedSource)
+                val text = Jsoup.parse(translatedSource)
+                    .select("article .article .article__flow-element .trans-p")
+                    .text()
+                shortcuts.add(Shortcut(page.title, HanLP.getSummary(text, 1000), "pages/$filename"))
             }
+        Utils.writeAndDeleteIfExists(pathSet.indexes, Json.encodeToString(shortcuts))
     }
 }

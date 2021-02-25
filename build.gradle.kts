@@ -12,6 +12,7 @@ repositories {
 }
 
 dependencies {
+    implementation("com.hankcs:hanlp:portable-1.7.8")
     implementation("cn.hutool:hutool-all:5.5.8")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.0.1")
     implementation("org.jsoup:jsoup:1.13.1")
