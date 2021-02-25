@@ -80,8 +80,8 @@ fun main() {
     Utils.browserWithClose(headless = true, proxy = true) { driver ->
         driver.manage().window().maximize()
         val shortcuts = mutableListOf<Shortcut>()
-        // val tocText = Utils.readAndEmptyIfNonExists(Paths.get("/Users/lanyuanxiaoyao/Downloads/HelpTOC.json"))
-        val tocText = Utils.downloadText("https://kotlinlang.org/docs/HelpTOC.json")
+        val tocText = Utils.readAndEmptyIfNonExists(Paths.get("/Users/lanyuanxiaoyao/Downloads/HelpTOC.json"))
+        // val tocText = Utils.downloadText("https://kotlinlang.org/docs/HelpTOC.json")
         val toc = parseToc(tocText)
         val pages = toc.topLevelIds.mapNotNull { toc.entities.pages[it] }
         val pathSet = Utils.pathSet("kotlin-reference")
@@ -90,7 +90,7 @@ fun main() {
             .filterNot { it.url.startsWith("http") }
             .filter { it.parsedUrl.isNotBlank() }
             .forEachIndexed { index, page ->
-                if (index > 10) {
+                if (index < 0) {
                     return@forEachIndexed
                 }
                 println("${page.parsedTitle} ${page.parsedUrl}")
@@ -144,9 +144,9 @@ fun main() {
 
                 val doc = Jsoup.parse(translatedSource)
                 val text = doc
-                    .select("article .article .article__flow-element .trans-p")
+                    .select(".trans-p")
                     .text()
-                shortcuts.add(Shortcut(page.title, HanLP.getSummary(text, 1000), "pages/$filename"))
+                shortcuts.add(Shortcut(page.title, HanLP.getSummary(text, 500), "pages/$filename"))
 
                 page.anchors.forEach { anchorId ->
                     val anchor = toc.entities.anchors[anchorId] ?: return@forEach
@@ -154,7 +154,7 @@ fun main() {
                     shortcuts.add(
                         Shortcut(
                             anchor.title,
-                            if (anchorText.isBlank()) "" else HanLP.getSummary(anchorText, 1000),
+                            if (anchorText.isBlank()) "" else HanLP.getSummary(anchorText, 500),
                             "pages/${anchor.url}${anchor.anchor}"
                         )
                     )
