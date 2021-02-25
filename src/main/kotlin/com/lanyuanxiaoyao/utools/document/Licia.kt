@@ -9,7 +9,7 @@ import java.nio.file.Paths
 
 fun main() {
     val documentUrl = "https://licia.liriliri.io/docs_cn.html"
-    Utils.browserWithClose(headless = false, proxy = true) {
+    Utils.browserWithClose(headless = true, proxy = true) {
         it.get(documentUrl)
         val text = Jsoup.parse(it.pageSource)
             .selectFirst("body > div.content-wrapper > div > div.md.doc-container")
@@ -21,8 +21,12 @@ fun main() {
         Utils.writeAndDeleteIfExists(pathSet.targetCss, Utils.readAndEmptyIfNonExists(pathSet.sourceCss))
         items.subList(1, items.size)
             .forEachIndexed { index, page ->
+                if (index > 0) {
+                    return@forEachIndexed
+                }
                 val doc = Jsoup.parse(page)
                 val title = doc.selectFirst("h2[id]").text()
+                val id = doc.selectFirst("h2[id]").attr("id")
                 println("Now handle: $index/${items.size}, $title")
                 val desc = doc.selectFirst("h2[id] + p + p").text()
                 doc.selectFirst("i.download")?.remove()
@@ -49,7 +53,7 @@ fun main() {
                 val path = Paths.get(pathSet.pages.toString(), "$title.html")
                 // language=HTML
                 val html =
-                    "<html lang=\"zh\">\n<head>\n    <meta charset=\"UTF-8\">\n    <title>$title</title>\n    <link type=\"text/css\" rel=\"stylesheet\" href=\"style.css\">\n</head>\n<body>${doc.html()}<h3>源码</h3>\n<pre><code class=\"language-typescript\">$source</code></pre>\n<h3>测试用例</h3>\n<pre><code class=\"language-typescript\">$test</code></pre>\n</body>\n<script type=\"text/javascript\" src=\"${
+                    "<html lang=\"zh\">\n<head>\n    <meta charset=\"UTF-8\">\n    <title>$title</title>\n    <link type=\"text/css\" rel=\"stylesheet\" href=\"style.css\">\n</head>\n<body>${Utils.authorInfo("$documentUrl#$id")}${doc.html()}<h3>源码</h3>\n<pre><code class=\"language-typescript\">$source</code></pre>\n<h3>测试用例</h3>\n<pre><code class=\"language-typescript\">$test</code></pre>\n</body>\n<script type=\"text/javascript\" src=\"${
                         Paths.get(
                             "js/prismjs/prism.js"
                         ).toAbsolutePath()

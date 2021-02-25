@@ -221,5 +221,13 @@ class Utils {
             }
             return group.toList()
         }
+
+        fun authorInfo(sourceUrl: String) =
+            // language=HTML
+            "<div class='no-trans' style='color: darkgray; font-size: smaller; width: 100%; text-align: center'>\n    文档制作：\n    <a class=\"no-trans\" target=\"_blank\" href=\"https://donate.lanyuanxiaoyao.com\" style=\"color: darkgray\">lanyuanxiaoyao</a>\n    | \n    <a class=\"no-trans\" target=\"_blank\" href=\"$sourceUrl\" style=\"color: darkgray\">原文</a>\n</div>"
+
+        fun authorInfoTranslated(sourceUrl: String) =
+            // language=HTML
+            "<div class='no-trans' style='color: darkgray; font-size: smaller; width: 100%; text-align: center'>\n    文档制作：\n    <a class=\"no-trans\" target=\"_blank\" href=\"https://donate.lanyuanxiaoyao.com\" style=\"color: darkgray\">lanyuanxiaoyao</a>\n    |\n    <a class=\"no-trans\" target=\"_blank\" href=\"$sourceUrl\" style=\"color: darkgray\">原文</a>\n    | 译文：百度翻译 | 译文仅供辅助，不保证译文正确性\n</div>"
     }
 }
